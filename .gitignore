@@ -42,3 +42,5 @@ bin/
 ### Mac OS ###
 .DS_Store
 /.idea/
+/temp.json
+/src/main/java/production/
