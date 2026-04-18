@@ -5,9 +5,17 @@ import org.joml.Matrix4f;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
+import java.util.function.Consumer;
+
 public class Camera {
 	public final Vector3d position = new Vector3d(0, 0, 0);
 	public final Quaterniond rotation = new Quaterniond();
+	
+	public Camera set(Camera camera) {
+		position.set(camera.position);
+		rotation.set(camera.rotation);
+		return this;
+	}
 	
 	/**
 	 * 设置相机朝向目标点（类似gluLookAt）
@@ -20,15 +28,10 @@ public class Camera {
 		position.set(eye);
 		
 		// 创建视图矩阵
-		Matrix4f lookAtMatrix = new Matrix4f().lookAt(
-			(float) eye.x, (float) eye.y, (float) eye.z,
-			(float) center.x, (float) center.y, (float) center.z,
-			(float) up.x, (float) up.y, (float) up.z
-		);
+		Matrix4d lookAtMatrix = new Matrix4d().lookAt(eye, center, up);
 		
 		// 从视图矩阵提取旋转
-		lookAtMatrix.getUnnormalizedRotation(rotation);
-		
+		lookAtMatrix.getUnnormalizedRotation(rotation).invert();
 		return this;
 	}
 	
@@ -39,19 +42,25 @@ public class Camera {
 		return lookAt(position, target, up);
 	}
 	
+	public Camera lookAtDirection(Vector3d targetDirection) {
+		Vector3d currentForward = getForwardVector();
+		rotation.premul(new Quaterniond().rotationTo(currentForward, targetDirection));
+		return this;
+	}
 	/**
 	 * 从当前位置看向目标点（进行最小球面转动）
 	 */
 	public Camera lookAt(Vector3d target) {
-		Vector3d currentForward = getForwardVector();
-		Vector3d targetDirection = new Vector3d(target).sub(position).normalize();
-		Quaterniond rotationToTarget = new Quaterniond().rotationTo(currentForward, targetDirection);
-		rotation.premul(rotationToTarget);
-		return this;
+		return lookAtDirection(target.sub(position, new Vector3d()));
 	}
 	
 	public Vector3d rotate(Vector3d vec, Vector3d dest) { return rotation.transform(vec, dest); }
 	public Vector3d rotate(Vector3d vec) { return rotate(vec, vec); }
+	
+	public Camera applyRotate(Consumer<Quaterniond> rotator) {
+		rotator.accept(rotation);
+		return this;
+	}
 	
 	/**
 	 * 获取相机前向向量
@@ -92,8 +101,36 @@ public class Camera {
 	 */
 	public Vector3d getEulerAngles() {
 		Vector3d euler = new Vector3d();
-		rotation.getEulerAnglesZXY(euler);
+		rotation.getEulerAnglesYXZ(euler);
 		return euler;
+	}
+	
+	public Vector3d getYawPitchRoll() {
+		return getYawPitchRoll(new Vector3d());
+	}
+	
+	public Vector3d getYawPitchRoll(Vector3d res) {
+		// forward / up 向量
+		Vector3d forward = getForwardVector();
+		double yaw = Math.atan2(-forward.x, -forward.z);
+		if(Double.isNaN(yaw)) yaw = 0;
+		double pitch = Math.atan2(-forward.y, Math.sqrt(forward.x * forward.x + forward.z * forward.z));
+		
+		Vector3d rolledUp = getUpVector();
+		Vector3d rolledRight = getRightVector();
+		Vector3d unrolledRight = new Vector3d(1, 0, 0);
+		unrolledRight.rotateY(yaw);
+		
+		double cosRoll = rolledRight.dot(unrolledRight);
+		double sinRoll = rolledUp.dot(unrolledRight);
+		double roll = Math.atan2(sinRoll, cosRoll);
+		
+		// --- 写入 ---
+		res.x = yaw;
+		res.y = pitch;
+		res.z = roll;
+		
+		return res;
 	}
 	
 	/**
@@ -208,7 +245,7 @@ public class Camera {
 	
 	@Override
 	public String toString() {
-		Vector3d euler = getEulerAngles();
+		Vector3d euler = getYawPitchRoll();
 		return String.format("Camera[position=(%.2f, %.2f, %.2f), yaw=%.2f°, pitch=%.2f°, roll=%.2f°]",
 			position.x, position.y, position.z,
 			Math.toDegrees(euler.x), Math.toDegrees(euler.y), Math.toDegrees(euler.z));

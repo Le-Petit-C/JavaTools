@@ -1,10 +1,178 @@
 package lpc.javaTools.utils;
 
+import it.unimi.dsi.fastutil.doubles.Double2DoubleFunction;
+import it.unimi.dsi.fastutil.ints.Int2DoubleFunction;
+import it.unimi.dsi.fastutil.ints.Int2IntFunction;
+import org.jtransforms.fft.DoubleFFT_1D;
+
+import java.util.function.ToDoubleFunction;
+
 public class MathUtils {
+	public static double square(double x) { return x * x; }
 	public static double lerp(double a, double b, double t) {
 		return a + (b - a) * t;
 	}
 	public static double unlerp(double a, double b, double t) {
 		return (t - a) / (b - a);
+	}
+	public static double min(double[] vals) {
+		double min = vals[0];
+		for (int i = 1; i < vals.length; i++)
+			if (vals[i] < min)
+				min = vals[i];
+		return min;
+	}
+	public static double sum(double[] vals) {
+		double sum = 0;
+		for (double val : vals)
+			sum += val;
+		return sum;
+	}
+	public static double sum(Double2DoubleFunction function, double[] vals) {
+		double sum = 0;
+		for (double val : vals)
+			sum += function.applyAsDouble(val);
+		return sum;
+	}
+	public static double sum(Int2DoubleFunction function, int[] vals) {
+		double sum = 0;
+		for (int val : vals)
+			sum += function.applyAsDouble(val);
+		return sum;
+	}
+	public static double average(double[] vals) {
+		return sum(vals) / vals.length;
+	}
+	public static double average(Double2DoubleFunction function, double[] vals) {
+		return sum(function, vals) / vals.length;
+	}
+	public static double average(Int2DoubleFunction function, int[] vals) {
+		return sum(function, vals) / vals.length;
+	}
+	public static double[] apply(Double2DoubleFunction function, double[] vals) {
+		double[] result = new double[vals.length];
+		for (int i = 0; i < vals.length; i++)
+			result[i] = function.applyAsDouble(vals[i]);
+		return result;
+	}
+	public static double[] selfApply(Double2DoubleFunction function, double[] vals) {
+		for (int i = 0; i < vals.length; i++) vals[i] = function.applyAsDouble(vals[i]);
+		return vals;
+	}
+	public static int[] selfApply(Int2IntFunction function, int[] vals) {
+		for (int i = 0; i < vals.length; i++) vals[i] = function.applyAsInt(vals[i]);
+		return vals;
+	}
+	public static double[] selfInverse(double[] arr) {
+		int i = 0, j = arr.length - 1;
+		while (i < j) {
+			double tmp = arr[i];
+			arr[i] = arr[j];
+			arr[j] = tmp;
+			++i;
+			--j;
+		}
+		return arr;
+	}
+	public static double[] apply(Int2DoubleFunction function, int[] vals) {
+		double[] result = new double[vals.length];
+		for (int i = 0; i < vals.length; i++) result[i] = function.applyAsDouble(vals[i]);
+		return result;
+	}
+	public static <T> double[] apply(ToDoubleFunction<T> function, T[] vals) {
+		double[] result = new double[vals.length];
+		for (int i = 0; i < vals.length; i++) result[i] = function.applyAsDouble(vals[i]);
+		return result;
+	}
+	public static double[] convolution(double[] a, double[] b) {
+		double[] result = new double[a.length + b.length - 1];
+		for(int i = 0; i < a.length; ++i)
+			for(int j = 0; j < b.length; ++j)
+				result[i + j] += a[i] * b[j];
+		return result;
+	}
+	public static double[] fastConvolution(double[] a, double[] b) {
+		int resultSize = a.length + b.length - 1;
+		
+		// 取 >= resultSize 的 2 的幂（FFT更快）
+		int n = 1;
+		while (n < resultSize) n <<= 1;
+		
+		// 复数数组（长度 = 2*n）
+		double[] fa = new double[2 * n];
+		double[] fb = new double[2 * n];
+		
+		// 拷贝数据到实部（虚部默认0）
+		for (int i = 0; i < a.length; i++) {
+			fa[2 * i] = a[i];
+		}
+		for (int i = 0; i < b.length; i++) {
+			fb[2 * i] = b[i];
+		}
+		
+		DoubleFFT_1D fft = new DoubleFFT_1D(n);
+		
+		// 正变换
+		fft.complexForward(fa);
+		fft.complexForward(fb);
+		
+		// 频域复数乘法
+		for (int i = 0; i < n; i++) {
+			int re = 2 * i;
+			int im = re + 1;
+			
+			double ar = fa[re];
+			double ai = fa[im];
+			double br = fb[re];
+			double bi = fb[im];
+			
+			// (ar + ai*i) * (br + bi*i)
+			fa[re] = ar * br - ai * bi;
+			fa[im] = ar * bi + ai * br;
+		}
+		
+		// 逆变换（true = 自动除以 n）
+		fft.complexInverse(fa, true);
+		
+		// 取实部作为结果
+		double[] result = new double[resultSize];
+		for (int i = 0; i < resultSize; i++) {
+			result[i] = fa[2 * i];
+		}
+		
+		return result;
+	}
+	
+	public static boolean isRectArray(Object[][] array) {
+		if(array == null) return false;
+		if(array.length == 0) return true;
+		int l = array[0].length;
+		for(var arr : array)
+			if(arr.length != l)
+				return false;
+		return true;
+	}
+	
+	public static boolean isRectArray(int[][] array) {
+		if(array == null) return false;
+		if(array.length == 0) return true;
+		int l = array[0].length;
+		for(var arr : array)
+			if(arr.length != l)
+				return false;
+		return true;
+	}
+	
+	public static int maxIndexOf(double[] arr) {
+		if(arr == null || arr.length == 0) throw new IllegalArgumentException("Array is null or empty");
+		double max = arr[0];
+		int index = 0;
+		for(int i = 1; i < arr.length; i++) {
+			if (arr[i] > max) {
+				max = arr[i];
+				index = i;
+			}
+		}
+		return index;
 	}
 }

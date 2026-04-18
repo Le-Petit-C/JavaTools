@@ -44,3 +44,5 @@ bin/
 /.idea/
 /temp.json
 /src/main/java/production/
+/.profileconfig.json
+/profile.jfr
