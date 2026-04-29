@@ -1,6 +1,6 @@
 package lpc.javaTools.minecraft.replay;
 
-import lpc.javaTools.utils.MathUtils;
+import lpc.javaTools.utils.math.MathUtils;
 import org.joml.Vector3d;
 
 public interface CameraGen {

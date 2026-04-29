@@ -1,4 +1,4 @@
-package lpc.javaTools.utils;
+package lpc.javaTools.utils.math;
 
 import it.unimi.dsi.fastutil.doubles.Double2DoubleFunction;
 import it.unimi.dsi.fastutil.ints.Int2DoubleFunction;
@@ -6,6 +6,7 @@ import it.unimi.dsi.fastutil.ints.Int2IntFunction;
 import org.jtransforms.fft.DoubleFFT_1D;
 
 import java.util.function.ToDoubleFunction;
+import java.util.function.ToIntFunction;
 
 public class MathUtils {
 	public static double square(double x) { return x * x; }
@@ -174,5 +175,41 @@ public class MathUtils {
 			}
 		}
 		return index;
+	}
+	
+	public static double max(double[] values, Double2DoubleFunction function) {
+		double maxValue = Double.NEGATIVE_INFINITY;
+		for (double value : values) maxValue = Math.max(maxValue, function.applyAsDouble(value));
+		return maxValue;
+	}
+	
+	public static double max(double[] values) {
+		double maxValue = Double.NEGATIVE_INFINITY;
+		for (double value : values) maxValue = Math.max(maxValue, value);
+		return maxValue;
+	}
+	
+	public static <T> double max(Iterable<T> values, ToDoubleFunction<T> function) {
+		double maxValue = Double.NEGATIVE_INFINITY;
+		for (T value : values) maxValue = Math.max(maxValue, function.applyAsDouble(value));
+		return maxValue;
+	}
+	
+	public static <T> double doubleMax(Iterable<T> values, ToDoubleFunction<T> function) {
+		double maxValue = Double.NEGATIVE_INFINITY;
+		for (T value : values) maxValue = Math.max(maxValue, function.applyAsDouble(value));
+		return maxValue;
+	}
+	
+	public static <T> int max(Iterable<T> values, ToIntFunction<T> function) {
+		int maxValue = Integer.MIN_VALUE;
+		for (T value : values) maxValue = Math.max(maxValue, function.applyAsInt(value));
+		return maxValue;
+	}
+	
+	public static <T> int intMax(Iterable<T> values, ToIntFunction<T> function) {
+		int maxValue = Integer.MIN_VALUE;
+		for (T value : values) maxValue = Math.max(maxValue, function.applyAsInt(value));
+		return maxValue;
 	}
 }

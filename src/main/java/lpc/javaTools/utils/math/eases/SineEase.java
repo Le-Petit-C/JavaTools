@@ -1,6 +1,6 @@
-package lpc.javaTools.minecraft.replay.eases;
+package lpc.javaTools.utils.math.eases;
 
-import lpc.javaTools.utils.MathUtils;
+import lpc.javaTools.utils.math.MathUtils;
 import lpc.javaTools.minecraft.replay.Ease;
 
 public class SineEase implements Ease {

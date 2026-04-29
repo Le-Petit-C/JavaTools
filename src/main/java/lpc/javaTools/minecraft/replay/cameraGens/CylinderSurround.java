@@ -3,7 +3,7 @@ package lpc.javaTools.minecraft.replay.cameraGens;
 import lpc.javaTools.minecraft.replay.Camera;
 import lpc.javaTools.minecraft.replay.CameraGen;
 import lpc.javaTools.minecraft.replay.Ease;
-import lpc.javaTools.minecraft.replay.eases.LinearEase;
+import lpc.javaTools.utils.math.eases.LinearEase;
 import org.joml.Vector3d;
 
 public class CylinderSurround implements CameraGen {
@@ -24,11 +24,11 @@ public class CylinderSurround implements CameraGen {
 	}
 	
 	public CylinderSurround(Vector3d center, Vector3d axis, Vector3d start, double angle, double axisDrift) {
-		this(center, axis, start, angle, axisDrift, new LinearEase());
+		this(center, axis, start, angle, axisDrift, LinearEase.instance);
 	}
 	
 	public CylinderSurround(Vector3d center, Vector3d axis, Vector3d start, double angle) {
-		this(center, axis, start, angle, 0, new LinearEase());
+		this(center, axis, start, angle, 0, LinearEase.instance);
 	}
 	
 	@Override public Camera generate(Camera camera, double time) {

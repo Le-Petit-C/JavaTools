@@ -2,6 +2,7 @@ package lpc.javaTools.media;
 
 import com.google.gson.*;
 import com.google.gson.annotations.SerializedName;
+import lpc.javaTools.media.audio.AudioInfo;
 import lpc.javaTools.media.audio.PCMData;
 import org.apache.logging.log4j.LogManager;
 
@@ -12,13 +13,6 @@ import java.util.List;
 
 public class FFmpegUtils {
 	public static boolean logInfo = false;
-	
-	public record AudioInfo(
-		int channels,
-		int sampleRate,
-		int bitsPerSample,
-		String sampleFormat
-	) {}
 	
 	// =========================
 	// 解码
@@ -42,19 +36,19 @@ public class FFmpegUtils {
 		
 		byte[] raw = readAllBytes(temp);
 		
-		int totalSamples = raw.length / 4 / info.channels;
+		int totalSamples = raw.length / 4 / info.channels();
 		
-		int[][] buffer = new int[info.channels][totalSamples];
+		int[][] buffer = new int[info.channels()][totalSamples];
 		
 		ByteBuffer bb = ByteBuffer.wrap(raw).order(ByteOrder.LITTLE_ENDIAN);
 		
 		for (int i = 0; i < totalSamples; i++) {
-			for (int ch = 0; ch < info.channels; ch++) {
+			for (int ch = 0; ch < info.channels(); ch++) {
 				buffer[ch][i] = bb.getInt();
 			}
 		}
 		
-		PCMData data = new PCMData(buffer, info);
+		PCMData data = new PCMData(buffer, info.sampleRate());
 		
 		deleteTempFile(temp);
 		
@@ -82,7 +76,7 @@ public class FFmpegUtils {
 			"ffmpeg",
 			"-y",
 			"-f", "s32le",
-			"-ar", String.valueOf(data.audioInfo.sampleRate),
+			"-ar", String.valueOf(data.sampleRate),
 			"-ac", String.valueOf(data.samples.length),
 			"-i", temp.getAbsolutePath(),
 			"-c:a", codec,
@@ -92,6 +86,12 @@ public class FFmpegUtils {
 		deleteTempFile(temp);
 		
 		if(logInfo) LogManager.getLogger().info("Completed encoding file from PCM");
+	}
+	public static void encodeFromPCM(
+		PCMData data,
+		String filePath
+	) throws IOException {
+		encodeFromPCM(data, new File(filePath));
 	}
 	
 	private static String getCodecForExtension(File output) {

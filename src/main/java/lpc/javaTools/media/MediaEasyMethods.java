@@ -1,11 +1,10 @@
 package lpc.javaTools.media;
 
 import lpc.javaTools.media.audio.PCMData;
-import lpc.javaTools.utils.MathUtils;
+import lpc.javaTools.utils.math.MathUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 
 public class MediaEasyMethods {
 	public static void balanceChannels(File input, File output, boolean balanceOffset) throws IOException {

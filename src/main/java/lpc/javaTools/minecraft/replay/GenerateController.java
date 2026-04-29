@@ -1,9 +1,8 @@
 package lpc.javaTools.minecraft.replay;
 
-import lpc.javaTools.minecraft.replay.eases.LinearEase;
+import lpc.javaTools.utils.math.eases.LinearEase;
 import lpc.javaTools.utils.ClipboardUtils;
 
-import java.awt.*;
 import java.util.ArrayList;
 
 public class GenerateController {
@@ -11,8 +10,8 @@ public class GenerateController {
 	private final Output output;
 	private double gameTime = 10, videoTime = 10;
 	private int intervalCount = 1;
-	private Ease gameTimeEase = new LinearEase();
-	private Ease videoTimeEase = new LinearEase();
+	private Ease gameTimeEase = LinearEase.instance;
+	private Ease videoTimeEase = LinearEase.instance;
 	private boolean skipHead = false, skipTail = false;
 	public GenerateController(CameraGen cameraGen, Output output) {
 		this.cameraGen = cameraGen;
@@ -28,7 +27,7 @@ public class GenerateController {
 	}
 	
 	public void preGenerate(double gameTime, double videoTime, int intervalCount) {
-		preGenerate(gameTime, videoTime, intervalCount, new LinearEase(), new LinearEase());
+		preGenerate(gameTime, videoTime, intervalCount, LinearEase.instance, LinearEase.instance);
 	}
 	
 	public String generate() {
