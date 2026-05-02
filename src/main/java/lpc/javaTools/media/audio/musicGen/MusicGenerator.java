@@ -1,7 +1,7 @@
 package lpc.javaTools.media.audio.musicGen;
 
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
-import lpc.javaTools.media.FFmpegUtils;
+import lpc.javaTools.media.audio.FFmpegAudioUtils;
 import lpc.javaTools.media.audio.PCMData;
 import lpc.javaTools.media.audio.musicGen.timbers.Timbre;
 import lpc.javaTools.utils.math.MathUtils;
@@ -68,9 +68,9 @@ public class MusicGenerator {
 		return new PCMData(new int[][]{samples.getMaxSamples(new int[(int)Math.round(lastSampleTime * sampleRate)])}, sampleRate);
 	}
 	public void save(File outputFile) throws IOException {
-		FFmpegUtils.encodeFromPCM(generatePCM(), outputFile);
+		FFmpegAudioUtils.encodeFromPCM(generatePCM(), outputFile);
 	}
 	public void save(String path) throws IOException {
-		FFmpegUtils.encodeFromPCM(generatePCM(), path);
+		FFmpegAudioUtils.encodeFromPCM(generatePCM(), path);
 	}
 }

@@ -1,5 +1,6 @@
 package lpc.javaTools.media;
 
+import lpc.javaTools.media.audio.FFmpegAudioUtils;
 import lpc.javaTools.media.audio.PCMData;
 import lpc.javaTools.utils.math.MathUtils;
 
@@ -8,7 +9,7 @@ import java.io.IOException;
 
 public class MediaEasyMethods {
 	public static void balanceChannels(File input, File output, boolean balanceOffset) throws IOException {
-		PCMData pcmData = FFmpegUtils.decodeToPCM(input);
+		PCMData pcmData = FFmpegAudioUtils.decodeToPCM(input);
 		if(balanceOffset) {
 			int[] rawLeft = pcmData.samples[0];
 			int[] rawRight = pcmData.samples[1];
@@ -54,7 +55,7 @@ public class MediaEasyMethods {
 				MathUtils.selfApply(x -> Math.round(x * k), buffer[ch]);
 			}
 		}
-		FFmpegUtils.encodeFromPCM(pcmData, output);
+		FFmpegAudioUtils.encodeFromPCM(pcmData, output);
 	}
 	public static void balanceChannels(String path, boolean balanceOffset) throws IOException {
 		int dotIndex = path.lastIndexOf('.');

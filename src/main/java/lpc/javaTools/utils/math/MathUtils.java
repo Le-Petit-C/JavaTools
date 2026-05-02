@@ -9,13 +9,25 @@ import java.util.function.ToDoubleFunction;
 import java.util.function.ToIntFunction;
 
 public class MathUtils {
+	public static float lengthSquared(float x, float y) { return x * x + y * y; }
 	public static double square(double x) { return x * x; }
-	public static double lerp(double a, double b, double t) {
-		return a + (b - a) * t;
+	public static double lerp(double a, double b, double t) { return a + (b - a) * t; }
+	public static float lerp(float a, float b, float t) { return a + (b - a) * t; }
+	public static double unlerp(double a, double b, double t) { return (t - a) / (b - a); }
+	public static float unlerp(float a, float b, float t) { return (t - a) / (b - a); }
+	
+	// 在0~1的循环区间上进行线性插值，找最近的方向插值
+	// 假设a和b都在0~1区间上
+	public static float roundLerp(float a, float b, float t) {
+		if(Math.abs(a - b) > 0.5f) {
+			if(a < b) ++a;
+			else ++b;
+		}
+		float result = lerp(a, b, t);
+		if(result >= 1) --result;
+		return result;
 	}
-	public static double unlerp(double a, double b, double t) {
-		return (t - a) / (b - a);
-	}
+	
 	public static double min(double[] vals) {
 		double min = vals[0];
 		for (int i = 1; i < vals.length; i++)

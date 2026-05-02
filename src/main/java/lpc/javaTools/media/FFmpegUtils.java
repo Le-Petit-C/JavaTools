@@ -1,139 +1,21 @@
 package lpc.javaTools.media;
 
-import com.google.gson.*;
-import com.google.gson.annotations.SerializedName;
-import lpc.javaTools.media.audio.AudioInfo;
-import lpc.javaTools.media.audio.PCMData;
 import org.apache.logging.log4j.LogManager;
 
-import java.io.*;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 public class FFmpegUtils {
 	public static boolean logInfo = false;
 	
-	// =========================
-	// 解码
-	// =========================
-	public static PCMData decodeToPCM(File file) throws IOException {
-		if(logInfo) LogManager.getLogger().info("Start decoding file to PCM");
-		
-		File temp = File.createTempFile("audio_decode", ".raw");
-		
-		// ffmpeg -> raw PCM
-		runFFmpeg(List.of(
-			"ffmpeg",
-			"-i", file.getAbsolutePath(),
-			"-f", "s32le", // 统一用 32bit PCM
-			"-acodec", "pcm_s32le",
-			"-"
-		), temp);
-		
-		// 获取信息（简单方式：再跑一次 ffprobe 也可以）
-		AudioInfo info = probe(file);
-		
-		byte[] raw = readAllBytes(temp);
-		
-		int totalSamples = raw.length / 4 / info.channels();
-		
-		int[][] buffer = new int[info.channels()][totalSamples];
-		
-		ByteBuffer bb = ByteBuffer.wrap(raw).order(ByteOrder.LITTLE_ENDIAN);
-		
-		for (int i = 0; i < totalSamples; i++) {
-			for (int ch = 0; ch < info.channels(); ch++) {
-				buffer[ch][i] = bb.getInt();
-			}
-		}
-		
-		PCMData data = new PCMData(buffer, info.sampleRate());
-		
-		deleteTempFile(temp);
-		
-		if(logInfo) LogManager.getLogger().info("Completed decoding file to PCM");
-		
-		return data;
+	protected static void deleteTempFile(File file) {
+		if(!file.delete()) LogManager.getLogger().warn("Failed to delete temp file: {}", file.getAbsolutePath());
 	}
 	
-	// =========================
-	// 编码（无损优先）
-	// =========================
-	public static void encodeFromPCM(
-		PCMData data,
-		File output
-	) throws IOException {
-		if(logInfo) LogManager.getLogger().info("Start encoding file from PCM");
-		
-		File temp = File.createTempFile("audio_encode", ".raw");
-		
-		writePCM(data.samples, temp);
-		
-		String codec = getCodecForExtension(output);
-		
-		runFFmpeg(List.of(
-			"ffmpeg",
-			"-y",
-			"-f", "s32le",
-			"-ar", String.valueOf(data.sampleRate),
-			"-ac", String.valueOf(data.samples.length),
-			"-i", temp.getAbsolutePath(),
-			"-c:a", codec,
-			output.getAbsolutePath()
-		), null);
-		
-		deleteTempFile(temp);
-		
-		if(logInfo) LogManager.getLogger().info("Completed encoding file from PCM");
-	}
-	public static void encodeFromPCM(
-		PCMData data,
-		String filePath
-	) throws IOException {
-		encodeFromPCM(data, new File(filePath));
-	}
-	
-	private static String getCodecForExtension(File output) {
-		String name = output.getName().toLowerCase();
-		if (name.endsWith(".flac")) return "flac";
-		if (name.endsWith(".wav")) return "pcm_s16le"; // or pcm_s32le if bits==32
-		if (name.endsWith(".mp3")) return "libmp3lame";
-		if (name.endsWith(".aac")) return "aac";
-		if (name.endsWith(".ogg")) return "libvorbis";
-		// default to flac for lossless
-		return "flac";
-	}
-	
-	// =========================
-	// 直接复制（无损）
-	// =========================
-	public static void streamCopy(File input, File output) throws IOException {
-		runFFmpeg(List.of(
-			"ffmpeg",
-			"-i", input.getAbsolutePath(),
-			"-c", "copy",
-			output.getAbsolutePath()
-		), null);
-	}
-	
-	// =========================
-	// 内部工具
-	// =========================
-	
-	private static void writePCM(int[][] buffer, File file) throws IOException {
-		try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(file)))) {
-			int samples = buffer[0].length;
-			
-			for (int i = 0; i < samples; i++) {
-				for (int[] ints : buffer) {
-					out.writeInt(Integer.reverseBytes(ints[i]));
-				}
-			}
-		}
-	}
-	
-	private static void runFFmpeg(List<String> cmd, File outputFile) throws IOException {
+	protected static void runFFmpeg(List<String> cmd, File outputFile) throws IOException {
 		ProcessBuilder pb = new ProcessBuilder(cmd);
 		pb.redirectError(ProcessBuilder.Redirect.INHERIT);
 		
@@ -155,103 +37,9 @@ public class FFmpegUtils {
 		}
 	}
 	
-	private static byte[] readAllBytes(File file) throws IOException {
+	protected static byte[] readAllBytes(File file) throws IOException {
 		try (InputStream in = new FileInputStream(file)) {
 			return in.readAllBytes();
 		}
 	}
-	
-	static class FFProbeRaw {
-		static class Result {
-			List<Stream> streams;
-		}
-		
-		static class Stream{
-			@SerializedName("codec_type")
-			String codecType;
-			
-			Integer channels;
-			
-			@SerializedName("sample_rate")
-			String sampleRate;
-			
-			@SerializedName("bits_per_sample")
-			Integer bitsPerSample;
-			
-			@SerializedName("sample_fmt")
-			String sampleFmt;
-		}
-	}
-	
-	public static AudioInfo probe(File file) throws IOException {
-		try {
-			ProcessBuilder pb = new ProcessBuilder(
-				"ffprobe",
-				"-v", "quiet",
-				"-print_format", "json",
-				"-show_streams",
-				file.getAbsolutePath()
-			);
-			
-			pb.redirectError(ProcessBuilder.Redirect.INHERIT);
-			
-			Process p = pb.start();
-			
-			String json;
-			try (InputStream in = p.getInputStream()) {
-				json = new String(in.readAllBytes());
-			}
-			
-			int code = p.waitFor();
-			if (code != 0) {
-				throw new IOException("ffprobe failed with code " + code);
-			}
-			
-			// ✅ Gson 自动解析
-			Gson gson = new Gson();
-			FFProbeRaw.Result result = gson.fromJson(json, FFProbeRaw.Result.class);
-			
-			if (result.streams == null) {
-				throw new IOException("No streams found");
-			}
-			
-			// ✅ 找 audio stream
-			FFProbeRaw.Stream audio = null;
-			for (FFProbeRaw.Stream s : result.streams) {
-				if ("audio".equals(s.codecType)) {
-					audio = s;
-					break;
-				}
-			}
-			
-			if (audio == null) {
-				throw new IOException("No audio stream found");
-			}
-			
-			// ✅ 类型转换 + 默认值处理
-			int channels = audio.channels != null ? audio.channels : 2;
-			
-			int sampleRate = audio.sampleRate != null
-				? Integer.parseInt(audio.sampleRate)
-				: 44100;
-			
-			int bits = audio.bitsPerSample != null
-				? audio.bitsPerSample
-				: 16;
-			
-			String fmt = audio.sampleFmt != null
-				? audio.sampleFmt
-				: "s16";
-			
-			return new AudioInfo(channels, sampleRate, bits, fmt);
-			
-		} catch (InterruptedException e) {
-			throw new IOException(e);
-		}
-	}
-	
-	private static void deleteTempFile(File file) {
-		if(!file.delete()) LogManager.getLogger().warn("Failed to delete temp file: {}", file.getAbsolutePath());
-	}
 }
-
