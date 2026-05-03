@@ -3,7 +3,6 @@ package lpc.javaTools.media.image;
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 import lpc.javaTools.media.FFmpegUtils;
-import org.apache.logging.log4j.LogManager;
 
 import java.io.*;
 import java.util.List;
@@ -68,7 +67,7 @@ public class FFmpegImageUtils extends FFmpegUtils {
 	}
 	
 	public static ImageData decodeImage(File file) throws IOException {
-		if(logInfo) LogManager.getLogger().info("Start decoding image file");
+		if(logInfo) logger.info("Start decoding image file");
 		
 		ImageInfo info = probeImage(file);
 		
@@ -92,7 +91,7 @@ public class FFmpegImageUtils extends FFmpegUtils {
 		int i = 0;
 		for (byte b : data) rawFloats[i++] = Byte.toUnsignedInt(b) / 255.0f;
 		
-		if(logInfo) LogManager.getLogger().info("Completed decoding image file");
+		if(logInfo) logger.info("Completed decoding image file");
 		
 		return imageData;
 	}
@@ -102,7 +101,7 @@ public class FFmpegImageUtils extends FFmpegUtils {
 	}
 	
 	public static void encodeImage(byte[] pixelData, int width, int height, String pixFmt, File output) throws IOException {
-		if(logInfo) LogManager.getLogger().info("Start encoding image file");
+		if(logInfo) logger.info("Start encoding image file");
 		
 		File temp = File.createTempFile("image_encode", ".raw");
 		
@@ -122,7 +121,7 @@ public class FFmpegImageUtils extends FFmpegUtils {
 		
 		deleteTempFile(temp);
 		
-		if(logInfo) LogManager.getLogger().info("Completed encoding image file");
+		if(logInfo) logger.info("Completed encoding image file");
 	}
 	
 	public static void encodeImage(ImageData data, File output) throws IOException {

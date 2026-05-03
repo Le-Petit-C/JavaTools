@@ -1,6 +1,6 @@
 package lpc.javaTools.media.audio.musicGen.timbers;
 
-import lpc.javaTools.media.audio.musicGen.DoubleSampleRecorder;
+import lpc.javaTools.media.audio.musicGen.SampleRecorder;
 import lpc.javaTools.minecraft.replay.Ease;
 import lpc.javaTools.utils.math.eases.LinearEase;
 
@@ -16,7 +16,7 @@ public class SinWave implements Timbre {
 	public SinWave() {
 		this(LinearEase.instance, LinearEase.instance, 10, 10);
 	}
-	@Override public void superpose(DoubleSampleRecorder samples, double startTime, double duration, double sampleRate, double frequency, double volume) {
+	@Override public void superpose(SampleRecorder samples, double startTime, double duration, int sampleRate, double frequency, float volume) {
 		double startSample = startTime * sampleRate;
 		double samplePerPeriod = sampleRate / frequency;
 		double easeInEndSample = startSample + samplePerPeriod * easeInPeriods;
@@ -30,8 +30,8 @@ public class SinWave implements Timbre {
 		double sin = Math.sin(startPhase), cos = Math.cos(startPhase);
 		int iEaseInEndSample = (int) Math.floor(easeInEndSample);
 		for(int i = iStartSample; i <= iEaseInEndSample; ++i) {
-			double k = volume * easeIn.translate((i - startSample) / (easeInEndSample - startSample));
-			samples.superpose(i, k * sin);
+			float k = volume * (float)easeIn.translate((i - startSample) / (easeInEndSample - startSample));
+			samples.superpose(i, (float)(k * sin));
 			double newSin = sin * baseCos + baseSin * cos;
 			double newCos = cos * baseCos - sin * baseSin;
 			double k1 = 1.0 / Math.sqrt(newSin * newSin + newCos * newCos);
@@ -40,7 +40,7 @@ public class SinWave implements Timbre {
 		}
 		int iEndSample = (int) Math.floor(endSample);
 		for(int i = iEaseInEndSample + 1; i <= iEndSample; ++i) {
-			samples.superpose(i, volume * sin);
+			samples.superpose(i, (float)(volume * sin));
 			double newSin = sin * baseCos + baseSin * cos;
 			double newCos = cos * baseCos - sin * baseSin;
 			double k1 = 1.0 / Math.sqrt(newSin * newSin + newCos * newCos);
@@ -49,8 +49,8 @@ public class SinWave implements Timbre {
 		}
 		int iEaseOutEndSample = (int) Math.floor(easeOutEndSample);
 		for(int i = iEndSample + 1; i <= iEaseOutEndSample; ++i) {
-			double k = volume * easeOut.translate((easeOutEndSample - i) / (easeOutEndSample - endSample));
-			samples.superpose(i, k * sin);
+			float k = volume * (float)easeOut.translate((easeOutEndSample - i) / (easeOutEndSample - endSample));
+			samples.superpose(i, (float)(k * sin));
 			double newSin = sin * baseCos + baseSin * cos;
 			double newCos = cos * baseCos - sin * baseSin;
 			double k1 = 1.0 / Math.sqrt(newSin * newSin + newCos * newCos);

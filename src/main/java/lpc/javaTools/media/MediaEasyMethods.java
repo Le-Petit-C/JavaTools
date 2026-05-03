@@ -2,6 +2,7 @@ package lpc.javaTools.media;
 
 import lpc.javaTools.media.audio.FFmpegAudioUtils;
 import lpc.javaTools.media.audio.PCMData;
+import lpc.javaTools.utils.math.MathHelper;
 import lpc.javaTools.utils.math.MathUtils;
 
 import java.io.File;
@@ -11,13 +12,13 @@ public class MediaEasyMethods {
 	public static void balanceChannels(File input, File output, boolean balanceOffset) throws IOException {
 		PCMData pcmData = FFmpegAudioUtils.decodeToPCM(input);
 		if(balanceOffset) {
-			int[] rawLeft = pcmData.samples[0];
-			int[] rawRight = pcmData.samples[1];
-			double[] relative = MathUtils.fastConvolution(MathUtils.apply(v->v, rawLeft), MathUtils.selfInverse(MathUtils.apply(v->v, rawRight)));
+			float[] rawLeft = pcmData.samples[0];
+			float[] rawRight = pcmData.samples[1];
+			float[] relative = MathUtils.fastConvolution(rawLeft, MathUtils.selfInverse(rawRight));
 			int rightOffset = MathUtils.maxIndexOf(relative) - rawLeft.length + 1;
 			if(rightOffset != 0) {
-				int[] newLeft = new int[rawLeft.length + Math.abs(rightOffset)];
-				int[] newRight = new int[newLeft.length];
+				float[] newLeft = new float[rawLeft.length + Math.abs(rightOffset)];
+				float[] newRight = new float[newLeft.length];
 				if(rightOffset > 0) {
 					System.arraycopy(rawLeft, 0, newLeft, 0, rawLeft.length);
 					System.arraycopy(rawRight, 0, newRight, rightOffset, rawRight.length);
@@ -29,30 +30,24 @@ public class MediaEasyMethods {
 				pcmData.samples[1] = newRight;
 			}
 		}
-		int[][] buffer = pcmData.samples;
-		double[] channelStrength = new double[buffer.length];
+		float[][] buffer = pcmData.samples;
+		float[] channelStrength = new float[buffer.length];
 		for(int i = 0; i < buffer.length; ++i) {
-			int last = 0;
-			double res = 0;
-			for(int sample : buffer[i]) {
-				res += (double)(sample - last) * (sample - last);
+			float last = 0;
+			float res = 0;
+			for(float sample : buffer[i]) {
+				res += (sample - last) * (sample - last);
 				last = sample;
 			}
-			channelStrength[i] = Math.sqrt(res / buffer[i].length);
+			channelStrength[i] = MathHelper.sqrt(res / buffer[i].length);
 		}
-		/* = MathUtils.apply(
-			channel ->
-				Math.sqrt(MathUtils.average(x -> (double)x * x, channel) -
-					MathUtils.square(MathUtils.average(x -> (double)x, channel))
-				), buffer
-		);*/
-		double minStrength = MathUtils.min(channelStrength);
+		float minStrength = MathUtils.min(channelStrength);
 		for (int ch = 0; ch < channelStrength.length; ++ch) {
-			double strength = channelStrength[ch];
+			float strength = channelStrength[ch];
 			if(strength != minStrength) {
-				float k = (float) (minStrength / strength);
+				float k = minStrength / strength;
 				System.out.println("k: " + k);
-				MathUtils.selfApply(x -> Math.round(x * k), buffer[ch]);
+				MathUtils.selfApply(x -> x * k, buffer[ch]);
 			}
 		}
 		FFmpegAudioUtils.encodeFromPCM(pcmData, output);

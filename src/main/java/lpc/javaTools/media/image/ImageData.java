@@ -2,6 +2,7 @@ package lpc.javaTools.media.image;
 
 import lpc.javaTools.utils.collection.DWHFloatArray3D;
 
+@SuppressWarnings("unused")
 public class ImageData extends DWHFloatArray3D {
 	public ImageData(int width, int height) { super(width, height, 4); }
 	

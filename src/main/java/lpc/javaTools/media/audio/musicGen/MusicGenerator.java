@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class MusicGenerator {
-	private static final double soundVelocity = 340;
 	private record Note(int beat, double subBeat, Timbre timbre, double sustainBeats, double frequency, double volume) {}
 	private record BPMChange(int previousSections, double newBPM) {}
 	private final ArrayList<Note> notes = new ArrayList<>();
@@ -19,7 +18,6 @@ public class MusicGenerator {
 	private final int beatsPerSection, sampleRate;
 	private final ArrayList<BPMChange> bpmChanges = new ArrayList<>();
 	
-	// recordDistance是录制时双声道采样的距离，单位是米
 	public MusicGenerator(double startBPM, int beatsPerSection, int sampleRate) {
 		this.startBPM = startBPM;
 		this.beatsPerSection = beatsPerSection;
@@ -52,7 +50,7 @@ public class MusicGenerator {
 			beatSustainTimes.add(secondPerBeats);
 			startTime += secondPerBeats;
 		}
-		DoubleSampleRecorder samples = new DoubleSampleRecorder();
+		SampleRecorder samples = new SampleRecorder();
 		for(var note : notes) {
 			double startBeat = note.beat + note.subBeat;
 			double endBeat = startBeat + note.sustainBeats;
@@ -65,7 +63,13 @@ public class MusicGenerator {
 		double lastSampleTime = beatStartTimes.getDouble(lastBeat);
 		while(Math.round(lastSampleTime * sampleRate) < samples.getSampleCount())
 			lastSampleTime += secondPerBeats * beatsPerSection;
-		return new PCMData(new int[][]{samples.getMaxSamples(new int[(int)Math.round(lastSampleTime * sampleRate)])}, sampleRate);
+		return new PCMData(new float[][]{samples.getSamples(new float[(int)Math.round(lastSampleTime * sampleRate)])}, sampleRate);
+	}
+	public void save(File outputFile, boolean autoDecreaseVolume, boolean autoIncreaseVolume) throws IOException {
+		FFmpegAudioUtils.encodeFromPCM(generatePCM(), outputFile, autoDecreaseVolume, autoIncreaseVolume);
+	}
+	public void save(String path, boolean autoDecreaseVolume, boolean autoIncreaseVolume) throws IOException {
+		FFmpegAudioUtils.encodeFromPCM(generatePCM(), path, autoDecreaseVolume, autoIncreaseVolume);
 	}
 	public void save(File outputFile) throws IOException {
 		FFmpegAudioUtils.encodeFromPCM(generatePCM(), outputFile);

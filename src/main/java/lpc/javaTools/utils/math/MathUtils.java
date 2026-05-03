@@ -1,13 +1,17 @@
 package lpc.javaTools.utils.math;
 
 import it.unimi.dsi.fastutil.doubles.Double2DoubleFunction;
+import it.unimi.dsi.fastutil.floats.Float2FloatFunction;
 import it.unimi.dsi.fastutil.ints.Int2DoubleFunction;
 import it.unimi.dsi.fastutil.ints.Int2IntFunction;
+import lpc.javaTools.utils.math.interfaces.ToFloatFunction;
 import org.jtransforms.fft.DoubleFFT_1D;
+import org.jtransforms.fft.FloatFFT_1D;
 
 import java.util.function.ToDoubleFunction;
 import java.util.function.ToIntFunction;
 
+@SuppressWarnings({"unused", "UnusedReturnValue"})
 public class MathUtils {
 	public static float lengthSquared(float x, float y) { return x * x + y * y; }
 	public static double square(double x) { return x * x; }
@@ -30,6 +34,13 @@ public class MathUtils {
 	
 	public static double min(double[] vals) {
 		double min = vals[0];
+		for (int i = 1; i < vals.length; i++)
+			if (vals[i] < min)
+				min = vals[i];
+		return min;
+	}
+	public static float min(float[] vals) {
+		float min = vals[0];
 		for (int i = 1; i < vals.length; i++)
 			if (vals[i] < min)
 				min = vals[i];
@@ -72,6 +83,10 @@ public class MathUtils {
 		for (int i = 0; i < vals.length; i++) vals[i] = function.applyAsDouble(vals[i]);
 		return vals;
 	}
+	public static float[] selfApply(Float2FloatFunction function, float[] vals) {
+		for (int i = 0; i < vals.length; i++) vals[i] = function.get(vals[i]);
+		return vals;
+	}
 	public static int[] selfApply(Int2IntFunction function, int[] vals) {
 		for (int i = 0; i < vals.length; i++) vals[i] = function.applyAsInt(vals[i]);
 		return vals;
@@ -80,6 +95,17 @@ public class MathUtils {
 		int i = 0, j = arr.length - 1;
 		while (i < j) {
 			double tmp = arr[i];
+			arr[i] = arr[j];
+			arr[j] = tmp;
+			++i;
+			--j;
+		}
+		return arr;
+	}
+	public static float[] selfInverse(float[] arr) {
+		int i = 0, j = arr.length - 1;
+		while (i < j) {
+			float tmp = arr[i];
 			arr[i] = arr[j];
 			arr[j] = tmp;
 			++i;
@@ -97,6 +123,14 @@ public class MathUtils {
 		for (int i = 0; i < vals.length; i++) result[i] = function.applyAsDouble(vals[i]);
 		return result;
 	}
+	public static <T> float[] toFloatApply(ToFloatFunction<T> function, T[] vals) {
+		float[] result = new float[vals.length];
+		for (int i = 0; i < vals.length; i++) result[i] = function.applyAsFloat(vals[i]);
+		return result;
+	}
+	public static <T> float[] apply(ToFloatFunction<T> function, T[] vals) {
+		return toFloatApply(function, vals);
+	}
 	public static double[] convolution(double[] a, double[] b) {
 		double[] result = new double[a.length + b.length - 1];
 		for(int i = 0; i < a.length; ++i)
@@ -104,6 +138,7 @@ public class MathUtils {
 				result[i + j] += a[i] * b[j];
 		return result;
 	}
+	
 	public static double[] fastConvolution(double[] a, double[] b) {
 		int resultSize = a.length + b.length - 1;
 		
@@ -149,9 +184,59 @@ public class MathUtils {
 		
 		// 取实部作为结果
 		double[] result = new double[resultSize];
-		for (int i = 0; i < resultSize; i++) {
+		for (int i = 0; i < resultSize; i++)
 			result[i] = fa[2 * i];
+		
+		return result;
+	}
+	
+	public static float[] fastConvolution(float[] a, float[] b) {
+		int resultSize = a.length + b.length - 1;
+		
+		// 取 >= resultSize 的 2 的幂（FFT更快）
+		int n = 1;
+		while (n < resultSize) n <<= 1;
+		
+		// 复数数组（长度 = 2*n）
+		float[] fa = new float[2 * n];
+		float[] fb = new float[2 * n];
+		
+		// 拷贝数据到实部（虚部默认0）
+		for (int i = 0; i < a.length; i++) {
+			fa[2 * i] = a[i];
 		}
+		for (int i = 0; i < b.length; i++) {
+			fb[2 * i] = b[i];
+		}
+		
+		FloatFFT_1D fft = new FloatFFT_1D(n);
+		
+		// 正变换
+		fft.complexForward(fa);
+		fft.complexForward(fb);
+		
+		// 频域复数乘法
+		for (int i = 0; i < n; i++) {
+			int re = 2 * i;
+			int im = re + 1;
+			
+			float ar = fa[re];
+			float ai = fa[im];
+			float br = fb[re];
+			float bi = fb[im];
+			
+			// (ar + ai*i) * (br + bi*i)
+			fa[re] = ar * br - ai * bi;
+			fa[im] = ar * bi + ai * br;
+		}
+		
+		// 逆变换（true = 自动除以 n）
+		fft.complexInverse(fa, true);
+		
+		// 取实部作为结果
+		float[] result = new float[resultSize];
+		for (int i = 0; i < resultSize; i++)
+			result[i] = fa[2 * i];
 		
 		return result;
 	}
@@ -189,6 +274,19 @@ public class MathUtils {
 		return index;
 	}
 	
+	public static int maxIndexOf(float[] arr) {
+		if(arr == null || arr.length == 0) throw new IllegalArgumentException("Array is null or empty");
+		float max = arr[0];
+		int index = 0;
+		for(int i = 1; i < arr.length; i++) {
+			if (arr[i] > max) {
+				max = arr[i];
+				index = i;
+			}
+		}
+		return index;
+	}
+	
 	public static double max(double[] values, Double2DoubleFunction function) {
 		double maxValue = Double.NEGATIVE_INFINITY;
 		for (double value : values) maxValue = Math.max(maxValue, function.applyAsDouble(value));
@@ -200,6 +298,14 @@ public class MathUtils {
 		for (double value : values) maxValue = Math.max(maxValue, value);
 		return maxValue;
 	}
+	
+	public static float floatMax(float[] values) {
+		float maxValue = Float.NEGATIVE_INFINITY;
+		for (float value : values) maxValue = Math.max(maxValue, value);
+		return maxValue;
+	}
+	
+	public static float max(float[] values) { return floatMax(values); }
 	
 	public static <T> double max(Iterable<T> values, ToDoubleFunction<T> function) {
 		double maxValue = Double.NEGATIVE_INFINITY;

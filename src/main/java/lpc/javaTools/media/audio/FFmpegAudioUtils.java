@@ -3,7 +3,7 @@ package lpc.javaTools.media.audio;
 import com.google.gson.*;
 import com.google.gson.annotations.SerializedName;
 import lpc.javaTools.media.FFmpegUtils;
-import org.apache.logging.log4j.LogManager;
+import lpc.javaTools.utils.math.MathUtils;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -16,16 +16,17 @@ public class FFmpegAudioUtils extends FFmpegUtils {
 	// 解码
 	// =========================
 	public static PCMData decodeToPCM(File file) throws IOException {
-		if(logInfo) LogManager.getLogger().info("Start decoding file to PCM");
+		if(logInfo) logger.info("Start decoding file to PCM");
 		
 		File temp = File.createTempFile("audio_decode", ".raw");
 		
-		// ffmpeg -> raw PCM
+		// ffmpeg -> raw PCM (使用浮点格式，让FFmpeg处理转换)
 		runFFmpeg(List.of(
 			"ffmpeg",
+			"-y",
 			"-i", file.getAbsolutePath(),
-			"-f", "s32le", // 统一用 32bit PCM
-			"-acodec", "pcm_s32le",
+			"-f", "f32le", // 32bit float little-endian
+			"-acodec", "pcm_f32le",
 			"-"
 		), temp);
 		
@@ -36,13 +37,13 @@ public class FFmpegAudioUtils extends FFmpegUtils {
 		
 		int totalSamples = raw.length / 4 / info.channels();
 		
-		int[][] buffer = new int[info.channels()][totalSamples];
+		float[][] buffer = new float[info.channels()][totalSamples];
 		
 		ByteBuffer bb = ByteBuffer.wrap(raw).order(ByteOrder.LITTLE_ENDIAN);
 		
 		for (int i = 0; i < totalSamples; i++) {
 			for (int ch = 0; ch < info.channels(); ch++) {
-				buffer[ch][i] = bb.getInt();
+				buffer[ch][i] = bb.getFloat();
 			}
 		}
 		
@@ -50,7 +51,7 @@ public class FFmpegAudioUtils extends FFmpegUtils {
 		
 		deleteTempFile(temp);
 		
-		if(logInfo) LogManager.getLogger().info("Completed decoding file to PCM");
+		if(logInfo) logger.info("Completed decoding file to PCM");
 		
 		return data;
 	}
@@ -59,16 +60,16 @@ public class FFmpegAudioUtils extends FFmpegUtils {
 	// 编码（无损优先）
 	// =========================
 	public static void encodeFromPCM(
-		PCMData data,
-		File output
+		PCMData data, File output,
+		boolean autoDecreaseVolume, boolean autoIncreaseVolume
 	) throws IOException {
-		if(logInfo) LogManager.getLogger().info("Start encoding file from PCM");
+		if(logInfo) logger.info("Start encoding file from PCM");
 		
 		EncodingParams params = getEncodingParams(output);
 		
 		File temp = File.createTempFile("audio_encode", ".raw");
 		
-		writePCM(data.samples, temp, params.bits);
+		writePCM(data.samples, temp, autoDecreaseVolume, autoIncreaseVolume);
 		
 		List<String> cmd = new ArrayList<>();
 		cmd.add("ffmpeg");
@@ -83,6 +84,8 @@ public class FFmpegAudioUtils extends FFmpegUtils {
 		cmd.add(temp.getAbsolutePath());
 		cmd.add("-c:a");
 		cmd.add(params.codec);
+		cmd.add("-sample_fmt");
+		cmd.add("s16");
 		if (params.strictExperimental) {
 			cmd.add("-strict");
 			cmd.add("experimental");
@@ -93,45 +96,55 @@ public class FFmpegAudioUtils extends FFmpegUtils {
 		
 		deleteTempFile(temp);
 		
-		if(logInfo) LogManager.getLogger().info("Completed encoding file from PCM");
+		if(logInfo) logger.info("Completed encoding file from PCM");
 	}
 	public static void encodeFromPCM(
-		PCMData data,
-		String filePath
+		PCMData data, String filePath,
+		boolean autoDecreaseVolume, boolean autoIncreaseVolume
 	) throws IOException {
-		encodeFromPCM(data, new File(filePath));
+		encodeFromPCM(data, new File(filePath), autoDecreaseVolume, autoIncreaseVolume);
+	}
+	public static void encodeFromPCM(
+		PCMData data, File output
+	) throws IOException {
+		encodeFromPCM(data, output, false, false);
+	}
+	public static void encodeFromPCM(
+		PCMData data, String filePath
+	) throws IOException {
+		encodeFromPCM(data, new File(filePath), false, false);
 	}
 	
 	private static EncodingParams getEncodingParams(File output) {
 		String name = output.getName().toLowerCase();
 		EncodingParams params = new EncodingParams();
 		if (name.endsWith(".flac")) {
-			params.format = "s32le";
+			params.format = "f32le";
 			params.codec = "flac";
 			params.strictExperimental = true;
 			params.bits = 32;
 		} else if (name.endsWith(".wav")) {
-			params.format = "s16le";
+			params.format = "f32le";
 			params.codec = "pcm_s16le";
 			params.strictExperimental = false;
-			params.bits = 16;
+			params.bits = 32;
 		} else if (name.endsWith(".mp3")) {
-			params.format = "s16le";
+			params.format = "f32le";
 			params.codec = "libmp3lame";
 			params.strictExperimental = false;
-			params.bits = 16;
+			params.bits = 32;
 		} else if (name.endsWith(".aac")) {
-			params.format = "s16le";
+			params.format = "f32le";
 			params.codec = "aac";
 			params.strictExperimental = false;
-			params.bits = 16;
+			params.bits = 32;
 		} else if (name.endsWith(".ogg")) {
-			params.format = "s16le";
+			params.format = "f32le";
 			params.codec = "libvorbis";
 			params.strictExperimental = false;
-			params.bits = 16;
+			params.bits = 32;
 		} else {
-			params.format = "s32le";
+			params.format = "f32le";
 			params.codec = "flac";
 			params.strictExperimental = true;
 			params.bits = 32;
@@ -149,25 +162,34 @@ public class FFmpegAudioUtils extends FFmpegUtils {
 	// =========================
 	// 内部工具
 	// =========================
-	
-	private static void writePCM(int[][] buffer, File file) throws IOException {
-		writePCM(buffer, file, 16);
-	}
-	private static void writePCM(int[][] buffer, File file, int bitsPerSample) throws IOException {
-		try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(file)))) {
-			int samples = buffer[0].length;
-			
-			for (int i = 0; i < samples; i++) {
-				for (int[] ints : buffer) {
-					if (bitsPerSample == 16) {
-						out.writeShort(Short.reverseBytes((short)ints[i]));
-					} else if (bitsPerSample == 24) {
-						out.writeInt(Integer.reverseBytes(ints[i] << 8));
-					} else {
-						out.writeInt(Integer.reverseBytes(ints[i]));
-					}
-				}
-			}
+
+	private static void writePCM(float[][] buffer, File file, boolean autoDecreaseVolume, boolean autoIncreaseVolume) throws IOException {
+		int samples = buffer[0].length;
+		int channels = buffer.length;
+		ByteBuffer bb = ByteBuffer.allocate(samples * channels * 4).order(ByteOrder.LITTLE_ENDIAN);
+		
+		float k;
+		if(autoIncreaseVolume || autoDecreaseVolume) {
+			float max = MathUtils.floatMax(MathUtils.toFloatApply(MathUtils::floatMax, buffer));
+			if(max < 1.0f ? autoDecreaseVolume : autoIncreaseVolume) k = 1.0f / max;
+			else k = 1.0f;
+		}
+		else k = 1.0f;
+		
+		if(k == 1.0f) {
+			for (int i = 0; i < samples; i++)
+				for (float[] floats : buffer)
+					bb.putFloat(floats[i]);
+		}
+		else {
+			if(logInfo) logger.info("Volume too {}, adjusting by multiplying factor {}", k < 1.0f ? "big" : "small",  k);
+			for (int i = 0; i < samples; i++)
+				for (float[] floats : buffer)
+					bb.putFloat(floats[i] * k);
+		}
+		
+		try (FileOutputStream fos = new FileOutputStream(file)) {
+			fos.write(bb.array());
 		}
 	}
 	

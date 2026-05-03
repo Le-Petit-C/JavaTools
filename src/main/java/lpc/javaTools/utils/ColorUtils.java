@@ -4,6 +4,7 @@ import lpc.javaTools.utils.math.MathUtils;
 
 import java.awt.*;
 
+@SuppressWarnings("unused")
 public class ColorUtils {
 	public static float[] RGBtoHSB(int r, int g, int b, float[] hsbVals) {
 		return Color.RGBtoHSB(r, g, b, hsbVals);

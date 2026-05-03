@@ -1,6 +1,7 @@
 package lpc.javaTools.media;
 
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -10,6 +11,8 @@ import java.util.List;
 
 public class FFmpegUtils {
 	public static boolean logInfo = false;
+	
+	protected static final Logger logger = LogManager.getLogger("FFmpegUtils");
 	
 	protected static void deleteTempFile(File file) {
 		if(!file.delete()) LogManager.getLogger().warn("Failed to delete temp file: {}", file.getAbsolutePath());
