@@ -2,6 +2,7 @@ package lpc.javaTools.media;
 
 import lpc.javaTools.media.audio.FFmpegAudioUtils;
 import lpc.javaTools.media.audio.PCMData;
+import lpc.javaTools.utils.FileUtils;
 import lpc.javaTools.utils.math.MathHelper;
 import lpc.javaTools.utils.math.MathUtils;
 
@@ -53,10 +54,7 @@ public class MediaEasyMethods {
 		FFmpegAudioUtils.encodeFromPCM(pcmData, output);
 	}
 	public static void balanceChannels(String path, boolean balanceOffset) throws IOException {
-		int dotIndex = path.lastIndexOf('.');
-		String outputPath;
-		if (dotIndex == -1) outputPath = path + "_balanced";
-		else outputPath = path.substring(0, dotIndex) + "_balanced" + path.substring(dotIndex);
-		MediaEasyMethods.balanceChannels(new File(path), new File(outputPath), balanceOffset);
+		File outputFile = FileUtils.nextNotExistWithSuffix(path, "_balanced");
+		MediaEasyMethods.balanceChannels(new File(path), outputFile, balanceOffset);
 	}
 }

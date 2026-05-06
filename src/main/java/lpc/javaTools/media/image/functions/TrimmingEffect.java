@@ -12,7 +12,7 @@ import org.joml.Vector2i;
 import java.io.File;
 import java.io.IOException;
 
-import static lpc.javaTools.utils.FileUtils.nextNotExist;
+import static lpc.javaTools.utils.FileUtils.nextNotExistWithSuffix;
 
 public class TrimmingEffect {
 	public static void trimTextPicture(
@@ -39,7 +39,7 @@ public class TrimmingEffect {
 				boolean isTranslucent = image.getAlphaOrDefault(srcX, srcY, 0.0f) <= 0.5f;
 				float d = Float.POSITIVE_INFINITY;
 				direction.set(0, 0);
-				for(Vector2i pos : IterateUtils.iterateFromClosestInRadius(x, y, (isTranslucent ? expandRadius : innerRadius) + 0.707107f)) {
+				for(Vector2i pos : IterateUtils.iterateFromClosestInEuclideanDistance(x, y, (isTranslucent ? expandRadius : innerRadius) + 0.707107f)) {
 					float dx = pos.x - x, dy = pos.y - y;
 					float distanceSquared = dx * dx + dy * dy;
 					float distance = (float)Math.sqrt(distanceSquared);
@@ -86,14 +86,7 @@ public class TrimmingEffect {
 		float[] color1, float[] color2,
 		boolean hsbEase, Ease ease
 	) throws IOException {
-		int dotIndex =  filePath.lastIndexOf('.');
-		File outputFile;
-		if(dotIndex != -1){
-			String pathWithoutExt = filePath.substring(0, dotIndex);
-			String ext = filePath.substring(dotIndex);
-			outputFile = nextNotExist(pathWithoutExt + "_trimmed", ext);
-		}
-		else outputFile = nextNotExist(filePath + "_trimmed", "");
+		File outputFile = nextNotExistWithSuffix(filePath, "_trimmed");
 		trimTextPicture(new File(filePath), outputFile, innerRadius, expandRadius, basicDirection, color1, color2, hsbEase, ease);
 	}
 }

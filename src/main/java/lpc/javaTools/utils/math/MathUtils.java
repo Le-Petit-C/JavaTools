@@ -2,6 +2,7 @@ package lpc.javaTools.utils.math;
 
 import it.unimi.dsi.fastutil.doubles.Double2DoubleFunction;
 import it.unimi.dsi.fastutil.floats.Float2FloatFunction;
+import it.unimi.dsi.fastutil.floats.FloatIterable;
 import it.unimi.dsi.fastutil.ints.Int2DoubleFunction;
 import it.unimi.dsi.fastutil.ints.Int2IntFunction;
 import lpc.javaTools.utils.math.interfaces.ToFloatFunction;
@@ -15,10 +16,23 @@ import java.util.function.ToIntFunction;
 public class MathUtils {
 	public static float lengthSquared(float x, float y) { return x * x + y * y; }
 	public static double square(double x) { return x * x; }
+	public static float square(float x) { return x * x; }
 	public static double lerp(double a, double b, double t) { return a + (b - a) * t; }
 	public static float lerp(float a, float b, float t) { return a + (b - a) * t; }
 	public static double unlerp(double a, double b, double t) { return (t - a) / (b - a); }
 	public static float unlerp(float a, float b, float t) { return (t - a) / (b - a); }
+	
+	// 二次插值，认定y1,y2,y3分别是x=-1,0,1时的函数取值，做二次插值
+	public static double qerp(double y1, double y2, double y3, double x) {
+		double a = (y3 + y1) * 0.5 - y2;
+		double b = (y3 - y1) * 0.5;
+		return (a * x + b) * x + y2;
+	}
+	public static float qerp(float y1, float y2, float y3, float x) {
+		float a = (y3 + y1) * 0.5f - y2;
+		float b = (y3 - y1) * 0.5f;
+		return (a * x + b) * x + y2;
+	}
 	
 	// 在0~1的循环区间上进行线性插值，找最近的方向插值
 	// 假设a和b都在0~1区间上
@@ -52,6 +66,18 @@ public class MathUtils {
 			sum += val;
 		return sum;
 	}
+	public static float sum(float[] vals) {
+		float sum = 0;
+		for (float val : vals)
+			sum += val;
+		return sum;
+	}
+	public static float sum(FloatIterable vals) {
+		float sum = 0;
+		for (float val : vals)
+			sum += val;
+		return sum;
+	}
 	public static double sum(Double2DoubleFunction function, double[] vals) {
 		double sum = 0;
 		for (double val : vals)
@@ -63,6 +89,64 @@ public class MathUtils {
 		for (int val : vals)
 			sum += function.applyAsDouble(val);
 		return sum;
+	}
+	public static double norm1(double[] vals) {
+		double res = 0;
+		for (double val : vals)
+			res += Math.abs(val);
+		return res;
+	}
+	public static double norm2(double[] vals) {
+		double res = 0;
+		for (double val : vals)
+			res += val * val;
+		return Math.sqrt(res);
+	}
+	public static double normInf(double[] vals) {
+		double res = 0;
+		for (double val : vals)
+			res = Math.max(res, Math.abs(val));
+		return res;
+	}
+	public static float norm1(float[] vals) {
+		float res = 0;
+		for (float val : vals)
+			res += Math.abs(val);
+		return res;
+	}
+	public static float norm2(float[] vals) {
+		float res = 0;
+		for (float val : vals)
+			res += val * val;
+		return MathHelper.sqrt(res);
+	}
+	public static float distance2Squared(float[] p1, float[] p2) {
+		if(p1.length != p2.length) throw new IllegalArgumentException();
+		float sum = 0;
+		for(int i = 0; i < p1.length; ++i)
+			sum += square(p1[i] - p2[i]);
+		return sum;
+	}
+	public static float distance2(float[] p1, float[] p2) {
+		return MathHelper.sqrt(distance2Squared(p1, p2));
+	}
+	public static float normInf(float[] vals) {
+		float res = 0;
+		for (float val : vals)
+			res = Math.max(res, Math.abs(val));
+		return res;
+	}
+	public static int norm1(int[] vals) {
+		int res = 0;
+		for (int val : vals)
+			res += Math.abs(val);
+		return res;
+	}
+	public static int normInf(int[] vals) {
+		int res = 0;
+		for (int val : vals)
+			res = Math.max(res, Math.abs(val));
+		return res;
 	}
 	public static double average(double[] vals) {
 		return sum(vals) / vals.length;
@@ -133,6 +217,13 @@ public class MathUtils {
 	}
 	public static double[] convolution(double[] a, double[] b) {
 		double[] result = new double[a.length + b.length - 1];
+		for(int i = 0; i < a.length; ++i)
+			for(int j = 0; j < b.length; ++j)
+				result[i + j] += a[i] * b[j];
+		return result;
+	}
+	public static float[] convolution(float[] a, float[] b) {
+		float[] result = new float[a.length + b.length - 1];
 		for(int i = 0; i < a.length; ++i)
 			for(int j = 0; j < b.length; ++j)
 				result[i + j] += a[i] * b[j];
@@ -241,6 +332,31 @@ public class MathUtils {
 		return result;
 	}
 	
+	// 将a与flattenWidth个1.0f/flattenWidth组成的卷积核进行卷积
+	public static float[] fastConvoluteFlat(float[] a, int flattenWidth) {
+		if(flattenWidth < 1) throw new IllegalArgumentException();
+		float[] res = new float[a.length + flattenWidth - 1];
+		float[] buf = new float[res.length];
+		System.arraycopy(a, 0, buf, 0, a.length);
+		int k = 1;
+		int i = 0;
+		while(true) {
+			if((flattenWidth & k) != 0) {
+				for(int j = 0; j < a.length + k - 1; ++j)
+					res[j + i] += buf[j];
+				i |= k;
+			}
+			if((k << 1) > flattenWidth) break;
+			for(int j = a.length + (k << 1) - 1; --j >= k;)
+				buf[j] += buf[j - k];
+			k <<= 1;
+		}
+		float k1 = 1.0f / flattenWidth;
+		for(int j = 0; j < res.length; ++j)
+			res[j] *= k1;
+		return res;
+	}
+	
 	public static boolean isRectArray(Object[][] array) {
 		if(array == null) return false;
 		if(array.length == 0) return true;
@@ -329,5 +445,9 @@ public class MathUtils {
 		int maxValue = Integer.MIN_VALUE;
 		for (T value : values) maxValue = Math.max(maxValue, function.applyAsInt(value));
 		return maxValue;
+	}
+	
+	public interface ModdedPostProcessing {
+		float apply(float a, int iPeriod);
 	}
 }

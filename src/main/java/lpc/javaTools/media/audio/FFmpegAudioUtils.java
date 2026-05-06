@@ -56,6 +56,10 @@ public class FFmpegAudioUtils extends FFmpegUtils {
 		return data;
 	}
 	
+	public static PCMData decodeToPCM(String path) throws IOException {
+		return decodeToPCM(new File(path));
+	}
+	
 	// =========================
 	// 编码（无损优先）
 	// =========================
@@ -75,7 +79,7 @@ public class FFmpegAudioUtils extends FFmpegUtils {
 		cmd.add("ffmpeg");
 		cmd.add("-y");
 		cmd.add("-f");
-		cmd.add(params.format);
+		cmd.add("f32le");
 		cmd.add("-ar");
 		cmd.add(String.valueOf(data.sampleRate));
 		cmd.add("-ac");
@@ -84,8 +88,10 @@ public class FFmpegAudioUtils extends FFmpegUtils {
 		cmd.add(temp.getAbsolutePath());
 		cmd.add("-c:a");
 		cmd.add(params.codec);
-		cmd.add("-sample_fmt");
-		cmd.add("s16");
+		if(params.sampleFormat != null) {
+			cmd.add("-sample_fmt");
+			cmd.add(params.sampleFormat);
+		}
 		if (params.strictExperimental) {
 			cmd.add("-strict");
 			cmd.add("experimental");
@@ -119,44 +125,37 @@ public class FFmpegAudioUtils extends FFmpegUtils {
 		String name = output.getName().toLowerCase();
 		EncodingParams params = new EncodingParams();
 		if (name.endsWith(".flac")) {
-			params.format = "f32le";
 			params.codec = "flac";
+			params.sampleFormat = "s16";
 			params.strictExperimental = true;
-			params.bits = 32;
 		} else if (name.endsWith(".wav")) {
-			params.format = "f32le";
 			params.codec = "pcm_s16le";
 			params.strictExperimental = false;
-			params.bits = 32;
 		} else if (name.endsWith(".mp3")) {
-			params.format = "f32le";
 			params.codec = "libmp3lame";
 			params.strictExperimental = false;
-			params.bits = 32;
 		} else if (name.endsWith(".aac")) {
-			params.format = "f32le";
 			params.codec = "aac";
 			params.strictExperimental = false;
-			params.bits = 32;
 		} else if (name.endsWith(".ogg")) {
-			params.format = "f32le";
 			params.codec = "libvorbis";
 			params.strictExperimental = false;
-			params.bits = 32;
+		} else if (name.endsWith(".m4a")) {
+			// M4A格式 (MP4容器中的AAC)
+			params.codec = "aac";
+			params.strictExperimental = false;
 		} else {
-			params.format = "f32le";
 			params.codec = "flac";
+			params.sampleFormat = "s16";
 			params.strictExperimental = true;
-			params.bits = 32;
 		}
 		return params;
 	}
 	
 	private static class EncodingParams {
-		String format;
 		String codec;
+		String sampleFormat = null;
 		boolean strictExperimental;
-		int bits;
 	}
 	
 	// =========================
@@ -171,7 +170,7 @@ public class FFmpegAudioUtils extends FFmpegUtils {
 		float k;
 		if(autoIncreaseVolume || autoDecreaseVolume) {
 			float max = MathUtils.floatMax(MathUtils.toFloatApply(MathUtils::floatMax, buffer));
-			if(max < 1.0f ? autoDecreaseVolume : autoIncreaseVolume) k = 1.0f / max;
+			if(max < 1.0f ? autoIncreaseVolume : autoDecreaseVolume) k = 1.0f / max;
 			else k = 1.0f;
 		}
 		else k = 1.0f;

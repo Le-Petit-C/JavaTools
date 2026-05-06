@@ -1,9 +1,12 @@
 package lpc.javaTools.utils;
 
+import javax.swing.filechooser.FileSystemView;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 public class SystemInfo {
+	public static final String desktopPath =  FileSystemView.getFileSystemView().getHomeDirectory().getPath();
+	
 	public static boolean FMASupport() {
 		String os = System.getProperty("os.name").toLowerCase();
 		
