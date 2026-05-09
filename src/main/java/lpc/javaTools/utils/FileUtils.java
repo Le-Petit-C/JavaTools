@@ -1,22 +1,23 @@
 package lpc.javaTools.utils;
 
-import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.function.BiFunction;
 
 public class FileUtils {
 	// ext应该是带'.'的
-	public static File nextNotExist(String pathWithoutExt, String ext) {
-		File file = new File(pathWithoutExt + ext);
+	public static Path nextNotExist(String pathWithoutExt, String ext) {
+		Path path = Path.of(pathWithoutExt + ext);
 		int i = 0;
-		while (file.exists()) file = new File(pathWithoutExt + '(' + ++i + ')' + ext);
-		return file;
+		while (Files.exists(path)) path = Path.of(pathWithoutExt + '(' + ++i + ')' + ext);
+		return path;
 	}
 	
-	public static File nextNotExist(String path) {
+	public static Path nextNotExist(String path) {
 		return splitExt(path, FileUtils::nextNotExist);
 	}
 	
-	public static File nextNotExistWithSuffix(String path, String suffix) {
+	public static Path nextNotExistWithSuffix(String path, String suffix) {
 		return splitExt(path, (name, ext) -> nextNotExist(name + suffix, ext));
 	}
 	

@@ -3,9 +3,11 @@ package lpc.javaTools.utils;
 import javax.swing.filechooser.FileSystemView;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.nio.file.Path;
 
 public class SystemInfo {
-	public static final String desktopPath =  FileSystemView.getFileSystemView().getHomeDirectory().getPath();
+	public static final Path desktopPath = Path.of(FileSystemView.getFileSystemView().getHomeDirectory().getPath());
+	public static int CPUThreadCount = Runtime.getRuntime().availableProcessors();
 	
 	public static boolean FMASupport() {
 		String os = System.getProperty("os.name").toLowerCase();

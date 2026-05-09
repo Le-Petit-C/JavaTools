@@ -6,8 +6,8 @@ import lpc.javaTools.media.audio.PCMData;
 import lpc.javaTools.media.audio.musicGen.timbers.Timbre;
 import lpc.javaTools.utils.math.MathUtils;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 
 public class MusicGenerator {
@@ -65,13 +65,13 @@ public class MusicGenerator {
 			lastSampleTime += secondPerBeats * beatsPerSection;
 		return new PCMData(new float[][]{samples.getSamples(new float[(int)Math.round(lastSampleTime * sampleRate)])}, sampleRate);
 	}
-	public void save(File outputFile, boolean autoDecreaseVolume, boolean autoIncreaseVolume) throws IOException {
+	public void save(Path outputFile, boolean autoDecreaseVolume, boolean autoIncreaseVolume) throws IOException {
 		FFmpegAudioUtils.encodeFromPCM(generatePCM(), outputFile, autoDecreaseVolume, autoIncreaseVolume);
 	}
 	public void save(String path, boolean autoDecreaseVolume, boolean autoIncreaseVolume) throws IOException {
 		FFmpegAudioUtils.encodeFromPCM(generatePCM(), path, autoDecreaseVolume, autoIncreaseVolume);
 	}
-	public void save(File outputFile) throws IOException {
+	public void save(Path outputFile) throws IOException {
 		FFmpegAudioUtils.encodeFromPCM(generatePCM(), outputFile);
 	}
 	public void save(String path) throws IOException {

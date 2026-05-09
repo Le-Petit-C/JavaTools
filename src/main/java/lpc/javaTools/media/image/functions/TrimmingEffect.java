@@ -9,14 +9,14 @@ import lpc.javaTools.utils.math.MathUtils;
 import org.joml.Vector2f;
 import org.joml.Vector2i;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import static lpc.javaTools.utils.FileUtils.nextNotExistWithSuffix;
 
 public class TrimmingEffect {
 	public static void trimTextPicture(
-		File inputFile, File outputFile,
+		Path inputPath, Path outputPath,
 		float innerRadius, float expandRadius,
 		Vector2f basicDirection,
 		float[] color1, float[] color2,
@@ -25,7 +25,7 @@ public class TrimmingEffect {
 		if(innerRadius < 0 || expandRadius < 0) throw new IllegalArgumentException();
 		Vector2f normalizedBasicDirection = basicDirection.normalize(new Vector2f());
 		int expanded = (int)Math.ceil(expandRadius);
-		ImageData image = FFmpegImageUtils.decodeImage(inputFile);
+		ImageData image = FFmpegImageUtils.decodeImage(inputPath);
 		ImageData newImage = new ImageData(image.getWidth() + expanded * 2, image.getHeight() + expanded * 2);
 		float[] hsbCache = hsbEase ? new float[3] : null;
 		float[] rgbCache = new float[3];
@@ -76,7 +76,7 @@ public class TrimmingEffect {
 				newImage.setBlue(x, y, rgbCache[2] * k);
 			}
 		}
-		FFmpegImageUtils.encodeImage(newImage, outputFile);
+		FFmpegImageUtils.encodeImage(newImage, outputPath);
 	}
 	
 	public static void trimTextPicture(
@@ -86,7 +86,7 @@ public class TrimmingEffect {
 		float[] color1, float[] color2,
 		boolean hsbEase, Ease ease
 	) throws IOException {
-		File outputFile = nextNotExistWithSuffix(filePath, "_trimmed");
-		trimTextPicture(new File(filePath), outputFile, innerRadius, expandRadius, basicDirection, color1, color2, hsbEase, ease);
+		Path outputPath = nextNotExistWithSuffix(filePath, "_trimmed");
+		trimTextPicture(Path.of(filePath), outputPath, innerRadius, expandRadius, basicDirection, color1, color2, hsbEase, ease);
 	}
 }

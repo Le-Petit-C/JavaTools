@@ -1,16 +1,24 @@
 package lpc.javaTools.utils.algorithm;
 
+import lpc.javaTools.NativeLoader;
 import lpc.javaTools.utils.math.MathHelper;
 import lpc.javaTools.utils.math.interfaces.ToBooleanFunction;
 import org.joml.Vector2i;
 import org.joml.Vector3i;
+import org.jspecify.annotations.NonNull;
 
-import java.util.Iterator;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.function.Function;
 
 @SuppressWarnings("unused")
 public class IterateUtils {
+	
+	static { NativeLoader.init(); }
+	
+	private static native Object[] getArrayListElementData(ArrayList<?> list);
+	private static native void setArrayListSize(ArrayList<?> list, int size);
+	private static native void increaseArrayListModCount(ArrayList<?> list);
+	
 	public static Iterable<Vector2i> iterateFromClosestInEuclideanDistance(float startX, float startY, float radius) {
 		float radiusSquared = radius * radius;
 		return ()->new IterateFromClosestInEuclideanDistanceIterator(startX, startY, radius, radiusSquared);
@@ -34,6 +42,72 @@ public class IterateUtils {
 	public static Iterable<Vector3i> iterateFromClosestByRender3D(ToBooleanFunction<Vector3i> isAvailable) {
 		Vector3i resCache = new Vector3i();
 		return iterateFromClosestByRender(2, isAvailable, resCache::set);
+	}
+	
+	
+	// 保序地O(n)移除需要移除的内容
+	/*public static <T> void accumulate(ArrayList<T> list, ToBooleanFunction<? super T> shouldRemove) {
+		int i = 0;
+		while (i < list.size() && !shouldRemove.applyAsBoolean(list.get(i))) ++i;
+		int j = i;
+		while (++i < list.size()) {
+			if(shouldRemove.applyAsBoolean(list.get(i))) continue;
+			list.set(j++, list.get(i));
+		}
+		while(j < list.size()) list.removeLast();
+	}*/
+	
+	@SuppressWarnings("unchecked")
+	public static <T> void fastRemove(ArrayList<T> list, ToBooleanFunction<? super T> shouldRemove) {
+		increaseArrayListModCount(list);
+		int i = 0;
+		int size = list.size();
+		Object[] elementData = getArrayListElementData(list);
+		while (i < size && !shouldRemove.applyAsBoolean((T)elementData[i])) ++i;
+		int j = i;
+		while (++i < size) {
+			if(shouldRemove.applyAsBoolean((T)elementData[i])) continue;
+			elementData[j++] = elementData[i];
+		}
+		setArrayListSize(list, j);
+		while (j < size) elementData[j++] = null;
+	}
+	
+	public static <T> void fastRemove2(ArrayList<T> list, ToBooleanFunction<? super T> shouldRemove) {
+		Collection<T> fakeCollection = new AbstractCollection<>() {
+			@Override public int size() { return 0; }
+			@SuppressWarnings("unchecked") @Override public boolean contains(Object o) { return shouldRemove.applyAsBoolean((T)o); }
+			@Override public @NonNull Iterator<T> iterator() { throw new UnsupportedOperationException(); }
+		};
+		list.removeAll(fakeCollection);
+	}
+	
+	// 不保序地O(n)移除需要移除的内容，平均来说相较于fastRemove常数会更小一些，移除率更低时常数会更小
+	/*public static <T> void fastRemoveUnsorted(ArrayList<T> list, ToBooleanFunction<? super T> shouldRemove) {
+		int i = 0;
+		while(true) {
+			while (i < list.size() && shouldRemove.applyAsBoolean(list.getLast())) list.removeLast();
+			int size = list.size();
+			while (i < size && !shouldRemove.applyAsBoolean(list.get(i))) ++i;
+			if(i >= size) return;
+			list.set(i, list.removeLast());
+		}
+	}*/
+	
+	@SuppressWarnings("unchecked")
+	public static <T> void fastRemoveUnsorted(ArrayList<T> list, ToBooleanFunction<? super T> shouldRemove) {
+		increaseArrayListModCount(list);
+		int i = 0;
+		Object[] elementData = getArrayListElementData(list);
+		int size = list.size();
+		while(true) {
+			while (i < size && shouldRemove.applyAsBoolean((T)elementData[size - 1])) elementData[--size] = null;
+			while (i < size && !shouldRemove.applyAsBoolean((T)elementData[i])) ++i;
+			if(i >= size) break;
+			elementData[i] = elementData[size - 1];
+			elementData[--size] = null;
+		}
+		setArrayListSize(list, size);
 	}
 	
 	public static <T, U> Iterable<U> translate(Iterable<T> iterable, Function<T, U> translator) {

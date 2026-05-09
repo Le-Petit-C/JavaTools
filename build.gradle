@@ -15,6 +15,28 @@ repositories {
     mavenCentral()
 }
 
+tasks.register("compileNative", Exec) {
+    def javaHome = System.getenv("JAVA_HOME")
+    def outDir = layout.buildDirectory.dir("native").get().asFile
+    outDir.mkdirs()
+
+    def outFile = new File(outDir, "lpcNatives.dll")
+
+    workingDir = file("src/main/c")
+
+    commandLine "gcc",
+            "-shared",
+            "-fPIC",
+            "-I${javaHome}/include",
+            "-I${javaHome}/include/win32",
+            "main.c",
+            "-o",
+            outFile
+}
+
+// ✅ 必须放这里（关键修复）
+tasks.compileJava.dependsOn compileNative
+
 dependencies {
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'

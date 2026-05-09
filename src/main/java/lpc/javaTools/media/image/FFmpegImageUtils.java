@@ -5,6 +5,7 @@ import com.google.gson.annotations.SerializedName;
 import lpc.javaTools.media.FFmpegUtils;
 
 import java.io.*;
+import java.nio.file.Path;
 import java.util.List;
 
 public class FFmpegImageUtils extends FFmpegUtils {
@@ -12,14 +13,14 @@ public class FFmpegImageUtils extends FFmpegUtils {
 	// =========================
 	// 图片解析和保存
 	// =========================
-	public static ImageInfo probeImage(File file) throws IOException {
+	public static ImageInfo probeImage(Path path) throws IOException {
 		try {
 			ProcessBuilder pb = new ProcessBuilder(
 				"ffprobe",
 				"-v", "quiet",
 				"-print_format", "json",
 				"-show_streams",
-				file.getAbsolutePath()
+				path.toAbsolutePath().toString()
 			);
 			
 			pb.redirectError(ProcessBuilder.Redirect.INHERIT);
@@ -66,20 +67,20 @@ public class FFmpegImageUtils extends FFmpegUtils {
 		}
 	}
 	
-	public static ImageData decodeImage(File file) throws IOException {
+	public static ImageData decodeImage(Path path) throws IOException {
 		if(logInfo) logger.info("Start decoding image file");
 		
-		ImageInfo info = probeImage(file);
+		ImageInfo info = probeImage(path);
 		
-		File temp = File.createTempFile("image_decode", ".raw");
+		Path temp = File.createTempFile("image_decode", ".raw").toPath();
 		
 		runFFmpeg(List.of(
 			"ffmpeg",
 			"-y",
-			"-i", file.getAbsolutePath(),
+			"-i", path.toAbsolutePath().toString(),
 			"-f", "rawvideo",
 			"-pix_fmt", "rgba",
-			temp.getAbsolutePath()
+			temp.toAbsolutePath().toString()
 		), null);
 		
 		byte[] data = readAllBytes(temp);
@@ -97,15 +98,15 @@ public class FFmpegImageUtils extends FFmpegUtils {
 	}
 	
 	public static ImageData decodeImage(String filePath) throws IOException {
-		return decodeImage(new File(filePath));
+		return decodeImage(Path.of(filePath));
 	}
 	
-	public static void encodeImage(byte[] pixelData, int width, int height, String pixFmt, File output) throws IOException {
+	public static void encodeImage(byte[] pixelData, int width, int height, String pixFmt, Path output) throws IOException {
 		if(logInfo) logger.info("Start encoding image file");
 		
-		File temp = File.createTempFile("image_encode", ".raw");
+		Path temp = File.createTempFile("image_encode", ".raw").toPath();
 		
-		try (FileOutputStream fos = new FileOutputStream(temp)) {
+		try (FileOutputStream fos = new FileOutputStream(temp.toFile())) {
 			fos.write(pixelData);
 		}
 		
@@ -115,8 +116,8 @@ public class FFmpegImageUtils extends FFmpegUtils {
 			"-f", "rawvideo",
 			"-pix_fmt", pixFmt,
 			"-s", width + "x" + height,
-			"-i", temp.getAbsolutePath(),
-			output.getAbsolutePath()
+			"-i", temp.toAbsolutePath().toString(),
+			output.toAbsolutePath().toString()
 		), null);
 		
 		deleteTempFile(temp);
@@ -124,7 +125,7 @@ public class FFmpegImageUtils extends FFmpegUtils {
 		if(logInfo) logger.info("Completed encoding image file");
 	}
 	
-	public static void encodeImage(ImageData data, File output) throws IOException {
+	public static void encodeImage(ImageData data, Path output) throws IOException {
 		int width = data.getWidth();
 		int height = data.getHeight();
 		byte[] pixelData = new byte[width * height * 4];
@@ -135,7 +136,7 @@ public class FFmpegImageUtils extends FFmpegUtils {
 	}
 	
 	public static void encodeImage(ImageData data, String filePath) throws IOException {
-		encodeImage(data, new File(filePath));
+		encodeImage(data, Path.of(filePath));
 	}
 	
 	// =========================

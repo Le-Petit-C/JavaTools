@@ -6,16 +6,16 @@ import lpc.javaTools.utils.FileUtils;
 import lpc.javaTools.utils.math.MathHelper;
 import lpc.javaTools.utils.math.MathUtils;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 public class MediaEasyMethods {
-	public static void balanceChannels(File input, File output, boolean balanceOffset) throws IOException {
+	public static void balanceChannels(Path input, Path output, boolean balanceOffset) throws IOException {
 		PCMData pcmData = FFmpegAudioUtils.decodeToPCM(input);
 		if(balanceOffset) {
 			float[] rawLeft = pcmData.samples[0];
 			float[] rawRight = pcmData.samples[1];
-			float[] relative = MathUtils.fastConvolution(rawLeft, MathUtils.selfInverse(rawRight));
+			float[] relative = MathUtils.fastConvolution(rawLeft, MathUtils.selfReverseOrderFloats(rawRight));
 			int rightOffset = MathUtils.maxIndexOf(relative) - rawLeft.length + 1;
 			if(rightOffset != 0) {
 				float[] newLeft = new float[rawLeft.length + Math.abs(rightOffset)];
@@ -48,13 +48,13 @@ public class MediaEasyMethods {
 			if(strength != minStrength) {
 				float k = minStrength / strength;
 				System.out.println("k: " + k);
-				MathUtils.selfApply(x -> x * k, buffer[ch]);
+				MathUtils.selfApply(buffer[ch], x -> x * k);
 			}
 		}
 		FFmpegAudioUtils.encodeFromPCM(pcmData, output);
 	}
 	public static void balanceChannels(String path, boolean balanceOffset) throws IOException {
-		File outputFile = FileUtils.nextNotExistWithSuffix(path, "_balanced");
-		MediaEasyMethods.balanceChannels(new File(path), outputFile, balanceOffset);
+		Path outputPath = FileUtils.nextNotExistWithSuffix(path, "_balanced");
+		MediaEasyMethods.balanceChannels(Path.of(path), outputPath, balanceOffset);
 	}
 }

@@ -24,6 +24,22 @@
  */
 package lpc.javaTools.utils.math.interfaces;
 
-public interface ToFloatFunction<T> {
+import it.unimi.dsi.fastutil.floats.Float2DoubleFunction;
+import it.unimi.dsi.fastutil.floats.Float2FloatFunction;
+import it.unimi.dsi.fastutil.floats.Float2IntFunction;
+import org.jspecify.annotations.NonNull;
+
+import java.util.function.Function;
+import java.util.function.ToDoubleFunction;
+import java.util.function.ToIntFunction;
+
+public interface ToFloatFunction<T> extends Function<T, Float>{
+    @Deprecated @Override default Float apply(T value) { return applyAsFloat(value); }
+    
     float applyAsFloat(T value);
+    
+    default <U> @NonNull Function<T, U> andThen(@NonNull Function<? super Float, ? extends U> after) { return v->after.apply(applyAsFloat(v)); }
+    default ToDoubleFunction<T> andThenDouble(Float2DoubleFunction after) { return v->after.get(applyAsFloat(v)); }
+    default ToFloatFunction<T> andThenFloat(Float2FloatFunction after) { return v->after.get(applyAsFloat(v)); }
+    default ToIntFunction<T> andThenInt(Float2IntFunction after) { return v->after.get(applyAsFloat(v)); }
 }

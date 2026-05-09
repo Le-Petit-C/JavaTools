@@ -1,1 +1,2 @@
 rootProject.name = 'JavaTools'
+include 'src:main:c'

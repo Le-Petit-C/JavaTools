@@ -7,7 +7,13 @@ import org.apache.commons.math3.distribution.NormalDistribution;
 
 @SuppressWarnings("unused")
 public class MathHelper {
-	public static float PI = (float)Math.PI;
+	public static double PI = Math.PI;
+	public static float PI_F = (float)Math.PI;
+	
+	// 黄金分割率
+	public static double FAI = 2.0 / (Math.sqrt(5) + 1);
+	public static float FAI_F = (float) FAI;
+	
 	public static int floor(float a) {
 		int i = (int) a;
 		if(i > a) return i - 1;
